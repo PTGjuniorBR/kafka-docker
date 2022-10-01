@@ -9,14 +9,13 @@ services:
     hostname: zk1
     environment:
       ZK_ID: 1
-      ZOOKEEPER_CLIENT_PORT: 22181
-      ZOOKEEPER_CONF_DIR: /conf/zookeeper.conf
+      ZOOKEEPER_CONF_DIR: /conf/zk1.conf
     volumes:
-      - ./config/kafka/config/:/conf
-      - ./config/kafka/scripts:/scripts
+      - ./config/kafka/config/zk1/:/conf
+      - ./config/kafka/scripts/:/scripts
       - /storage/pulsar/kafka/data/cluster/zoo1/data:/kafka/data/zookeeper/
       - /storage/pulsar/kafka/data/cluster/zoo1/log/:/kafka/logs
-    # command: /bin/bash "/scripts/start_zk.sh"  
+    command: /bin/sh -c "/scripts/zk1/export_port.sh"
   
   zk2:
     image: confluentinc/cp-zookeeper:7.2.1
@@ -25,15 +24,13 @@ services:
     hostname: zk2
     environment:
       ZK_ID: 2
-      ZOOKEEPER_CLIENT_PORT: 22181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker2:29093
-      ZOOKEEPER_CONF_DIR: /conf/zookeeper.conf
+      ZOOKEEPER_CONF_DIR: /conf/zk2.conf
     volumes:
-      - ./config/kafka/config/:/conf
+      - ./config/kafka/config/zk2/:/conf
       - ./config/kafka/scripts:/scripts
       - /storage/pulsar/kafka/data/cluster/zoo2/data:/kafka/data/zookeeper/
       - /storage/pulsar/kafka/data/cluster/zoo2/log/:/kafka/logs
-    # command: /bin/bash "/scripts/start_zk.sh"
+    command: /bin/sh -c "/scripts/zk2/export_port.sh"
 
   broker1:
     image: confluentinc/cp-kafka:7.2.1
@@ -43,10 +40,10 @@ services:
     ports:
       - 9092:9092
       - 29092:29092
-    env_file: ./dev.env  
+    env_file: /storage/app/conf/.env  
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_BROKER_CONF: /conf/broker1.env
+      KAFKA_BROKER_CONF: /conf/broker1.conf
       KAFKA_ADVERTISED_LISTENERS: ${BK_ADV_LISTENERS1}
     volumes:
       - ./config/kafka/config/broker1/:/conf
@@ -61,12 +58,12 @@ services:
     hostname: broker2
     container_name: broker2
     ports:
-      - 29093:29093
       - 9093:9093
-    env_file: ./dev.env
+      - 29093:29093
+    env_file: /storage/app/conf/.env
     environment:
       KAFKA_BROKER_ID: 2
-      KAFKA_BROKER_CONF: /conf/broker2.env
+      KAFKA_BROKER_CONF: /conf/broker2.conf
       KAFKA_ADVERTISED_LISTENERS: ${BK_ADV_LISTENERS2}
     volumes:
       - ./config/kafka/config/broker2/:/conf
