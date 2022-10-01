@@ -1,0 +1,89 @@
+version: '3.7'
+
+services:
+
+  zk1:
+    image: confluentinc/cp-zookeeper:7.2.1
+    restart: unless-stopped
+    container_name: zk1
+    hostname: zk1
+    environment:
+      ZK_ID: 1
+      ZOOKEEPER_CLIENT_PORT: 22181
+      ZOOKEEPER_CONF_DIR: /conf/zookeeper.conf
+    volumes:
+      - ./config/kafka/config/:/conf
+      - ./config/kafka/scripts:/scripts
+      - /storage/pulsar/kafka/data/cluster/zoo1/data:/kafka/data/zookeeper/
+      - /storage/pulsar/kafka/data/cluster/zoo1/log/:/kafka/logs
+    # command: /bin/bash "/scripts/start_zk.sh"  
+  
+  zk2:
+    image: confluentinc/cp-zookeeper:7.2.1
+    restart: unless-stopped
+    container_name: zk2
+    hostname: zk2
+    environment:
+      ZK_ID: 2
+      ZOOKEEPER_CLIENT_PORT: 22181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker2:29093
+      ZOOKEEPER_CONF_DIR: /conf/zookeeper.conf
+    volumes:
+      - ./config/kafka/config/:/conf
+      - ./config/kafka/scripts:/scripts
+      - /storage/pulsar/kafka/data/cluster/zoo2/data:/kafka/data/zookeeper/
+      - /storage/pulsar/kafka/data/cluster/zoo2/log/:/kafka/logs
+    # command: /bin/bash "/scripts/start_zk.sh"
+
+  broker1:
+    image: confluentinc/cp-kafka:7.2.1
+    restart: unless-stopped
+    container_name: broker1
+    hostname: broker1
+    ports:
+      - 9092:9092
+      - 29092:29092
+    env_file: ./dev.env  
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_BROKER_CONF: /conf/broker1.env
+      KAFKA_ADVERTISED_LISTENERS: ${BK_ADV_LISTENERS1}
+    volumes:
+      - ./config/kafka/config/broker1/:/conf
+      - /storage/pulsar/kafka/data/cluster/broker1/log/:/kafka/logs
+    depends_on:
+      - zk1
+      - zk2
+
+  broker2:
+    image: confluentinc/cp-kafka:7.2.1
+    restart: unless-stopped
+    hostname: broker2
+    container_name: broker2
+    ports:
+      - 29093:29093
+      - 9093:9093
+    env_file: ./dev.env
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_BROKER_CONF: /conf/broker2.env
+      KAFKA_ADVERTISED_LISTENERS: ${BK_ADV_LISTENERS2}
+    volumes:
+      - ./config/kafka/config/broker2/:/conf
+      - /storage/pulsar/kafka/data/cluster/broker2/log/:/kafka/logs
+    depends_on:
+      - zk1
+      - zk2
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop:latest
+    container_name:   kafdrop
+    hostname:   kafdrop
+    depends_on:
+      - broker1
+      - broker2
+    ports:
+      - 19000:9000
+    environment:
+      KAFKA_BROKERCONNECT: broker1:29092,broker2:29093
+
